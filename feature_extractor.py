@@ -1,6 +1,4 @@
 """
-feature_extractor.py
-
 This module contains all feature functions for pinoybot
 It has a function called extract_features
 Which takes a list of tokens and converts it into a feature matrix (a pandas DataFrame)
@@ -40,6 +38,32 @@ def f_is_filipino_word(token):
     """
     token_str = str(token)
     if str(token).lower() in FIL_WORDS:
+        return 1
+    return 0
+
+def f_is_laughter_expression(token):
+    """
+    If 'haha' or 'hehe' exists in the token
+        return 1
+    """
+    token_str = str(token).lower()
+    if 'haha' in token_str:
+        return 1
+    if 'hehe' in token_str:
+        return 1
+    return 0
+
+def f_is_fully_capitalized(token):
+    """
+    If the token does not have a letter
+        return 0
+    If the token is fully capitalized
+        return 1
+    """
+    token_str = str(token)
+    if not any(c.isalpha() for c in token_str):
+        return 0
+    if token_str.isupper():
         return 1
     return 0
 
@@ -486,15 +510,38 @@ def f_has_consonant_cluster(token):
         return 1
     return 0
 
+def f_is_capitalized_mid_sentence(token, index, tokens):
+    """
+    Test if the token is a capitalized mid-sentence word (Named-Entity)
+    If The first letter is not capitalized
+        return 0
+    If it is the first token of the list
+        return 0
+    If the previous token is a sentence ender symbol
+        return 0
+    otherwise, return 1
+    """
+    token_str = str(token)
+    if not token_str[0].isupper():
+        return 0
+    if index == 0:
+        return 0
+    prev_token = str(tokens[index - 1])
+    if prev_token in ('.', '!', '?'):
+        return 0
+    return 1
+
 def extract_features(tokens: List[str]) -> pd.DataFrame:
     """
     Takes a list of tokens and converts it into a feature matrix.
 
-    It returns a 2d array where each row is a token and each column is a feature.
+    It returns a dataframe (2d array) where each row is a token and each column is a feature.
     """
-    feature_functions = [
+    token_only_features = [
         f_is_english_word,
         f_is_filipino_word,
+        f_is_laughter_expression,
+        f_is_fully_capitalized,
         f_is_pure_symbol,
         f_is_numeric,
         f_has_dash_duplication,
@@ -525,18 +572,29 @@ def extract_features(tokens: List[str]) -> pd.DataFrame:
         f_vowel_consonant_ratio,
         f_has_consonant_cluster,
     ]
-    """
-    Convert list of tokens to a pandas series, makes it easier to apply the functions
-    Create a dataframe to hold the features
-    Apply each function to the 'words' Series and
-    Store the result as a new column in our feature matrix 'X'
-    Columns are named after the function names
-    """
-    words = pd.Series(tokens)
-    X = pd.DataFrame()
 
-    for func in feature_functions:
-        col_name = func.__name__
-        X[col_name] = words.apply(func)
+    contextual_features = [
+        f_is_capitalized_mid_sentence
+    ]
 
+    """
+    Create a features list to store features temporarily
+    For every token, a temporary features list will contain the returns of:
+        token only features, and contextual_features (need index i) 
+        It will then append the features list for the single token to the all_features_list
+    Convert the all_features_list into a dataframe (feature matrix), then return it
+    """
+    all_features_list = []
+
+    for i, token in enumerate(tokens):
+        features = {}
+
+        for func in token_only_features:
+            features[func.__name__] = func(token)
+        for func in contextual_features:
+            features[func.__name__] = func(token, i, tokens)
+
+        all_features_list.append(features)
+
+    X = pd.DataFrame(all_features_list)
     return X
