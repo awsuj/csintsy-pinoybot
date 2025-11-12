@@ -120,8 +120,8 @@ plot_tree(final_model,
           class_names=final_model.classes_,
           filled=True,
           rounded=True,
-          fontsize=4,)
-plt.savefig('decision_tree_depth_20.png', dpi=300)
+          fontsize=5,)
+plt.savefig('decision_tree_depth_20_1.png', dpi=300)
 print("Saved simple tree image to 'decision_tree_simple.png'")
 
 # 8. Evaluate the FINAL model on the TEST set (the "final exam")
@@ -130,8 +130,30 @@ y_pred = final_model.predict(X_test)
 report = classification_report(y_test, y_pred, digits=4)  # Added digits=4 for more detail
 print(report)
 
+print("\n--- Feature Importance Report ---")
+
+# Get feature names from your DataFrame
+feature_names = X_features.columns.tolist()
+# Get importances from the trained model
+importances = final_model.feature_importances_
+
+# Create a DataFrame to see them clearly
+importance_df = pd.DataFrame({
+    'feature': feature_names,
+    'importance': importances
+})
+
+# Sort by importance, from 0.0 (unused) upwards
+importance_df = importance_df.sort_values(by='importance', ascending=True)
+
+print("--- UNUSED/LEAST IMPORTANT FEATURES ---")
+print(importance_df.head(10))  # Shows the 10 least important
+
+print("\n--- MOST IMPORTANT FEATURES ---")
+print(importance_df.tail(10).sort_values(by='importance', ascending=False)) # Shows the 10 most important
+
 # 9. Save the final, tuned model
-model_filename = 'pinoybot_model_f1_validated_depth_20.pkl'
+model_filename = 'pinoybot_model_f1_validated_depth_20_1.pkl'
 print(f"\n--- 5. Saving Final Model ---")
 print(f"Saving trained model to {model_filename}...")
 with open(model_filename, 'wb') as f:
