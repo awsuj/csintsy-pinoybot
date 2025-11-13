@@ -20,7 +20,7 @@ FIL_WORDS = {
     'ang', 'mga', 'sa', 'ng', 'na', 'pa', 'ba', 'ay', 'si', 'ni', 'kay', 'kina',
     'ako', 'ikaw', 'siya', 'tayo', 'kami', 'sila', 'ito', 'iyan', 'iyon',
     'ko', 'mo', 'niya', 'namin', 'nila', 'atin', 'inyo', 'at', 'o', 'pero', 'hindi',
-    'nang', 'nina'
+    'nang', 'nina', 'sina','natin','po', 'amin'
 }
 
 def f_is_english_word(token):
