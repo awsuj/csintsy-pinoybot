@@ -8,45 +8,38 @@ from sklearn.metrics import f1_score
 from sklearn.tree import plot_tree
 import matplotlib.pyplot as plt
 
+"""
+Annotations are labeled as 'FIL', 'ENG', or 'OTH'
+"""
 def map_labels(label):
-    """
-    Converts raw annotation labels into the 3 target classes:
-    'FIL', 'ENG', or 'OTH', as required by the project spec.
-    """
-    label_str = str(label)
+    label = str(label)
 
-    # Per spec: Intra-word code switched ("CS") are treated as Filipino [cite: 57]
-    if label_str in ['FIL', 'CS']:
+    if label in ['FIL', 'CS']: # if a word is labeled as CS, it is used in FIL context
         return 'FIL'
 
-    if label_str == 'ENG':
+    if label == 'ENG':
         return 'ENG'
 
-    # Per spec: 'Rizal' (an NE) is 'OTH', and SYM, NUM, EXPR, ABB are 'OTH' [cite: 51, 54]
-    # So, we map everything else to OTH.
-    return 'OTH'
+    return 'OTH' # NE, SYM, NUM, EXPR, ABB
+
 
 print("Starting model training process...")
-
-# load dataset
+data = 'final_annotations.csv'
 try:
-    df = pd.read_csv('final_annotations.csv')
+    df = pd.read_csv(data)
 except FileNotFoundError:
-    print("Error: 'final_annotations.csv' not found.")
+    print(f"Error: {data} not found.")
     print("Please make sure the file is in the same directory.")
     exit()
 
-# data cleaning
-df_clean = df[['word', 'label']].dropna()
-
+df_clean = df[['word', 'label']].dropna() # remove nulls (NOT SURE IF NEEDED)
 X_raw = df_clean['word']
 
 print("Mapping labels to FIL, ENG, OTH...")
-y = df_clean['label'].apply(map_labels)  # <-- This is the new line
+y = df_clean['label'].apply(map_labels)  # labeling labels to FIL, ENG, or OTH (NOT SURE IF NEEDED)
 
 print(f"Loaded and cleaned {len(df_clean)} data points.")
 
-# Add this to check your work!
 print("New label distribution:")
 print(y.value_counts())
 
