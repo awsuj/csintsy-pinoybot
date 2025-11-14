@@ -1,24 +1,18 @@
 """
-pinoybot.py
-
-PinoyBot: Filipino Code-Switched Language Identifier
-This script includes the feature extraction logic to ensure compatibility
-with the 'pinoybot_model_f1_validated_depth_20_2.pkl' model.
+This file contains the main function that
+handles other modules and classifies each word with a
+'FIL', 'ENG', or 'OTH' tag
 """
 
 import os
 import pickle
-import re
-import pandas as pd
 from typing import List
 import feature_extractor as fe
-from sklearn.preprocessing import OrdinalEncoder
 
-# --- CONFIGURATION ---
 MODEL_FILENAME = 'pinoybot_model_f1_validated_depth_11.pkl'
 ENCODER_FILENAME = 'pinoybot_encoder_depth_11.pkl'
 
-# Exact feature order required by the model
+# List of features in the same order as the model
 FEATURE_COLS = [
     'f_get_language',
     'f_oth_filter',
@@ -39,6 +33,7 @@ FEATURE_COLS = [
     'f_is_capitalized_mid_sentence'
 ]
 
+# The list of features that return a string value
 CATEGORICAL_COLS = [
     'f_get_language',
     'f_oth_filter',
@@ -50,59 +45,58 @@ CATEGORICAL_COLS = [
     'f_get_suffix_eng'
 ]
 
-# Global variable for the model
+# Global variables
 _MODEL = None
 _ENCODER = None
 _EXTRACTOR = fe
 
 def tag_language(tokens: List[str]) -> List[str]:
     """
-    Tags each token in the input list with its predicted language.
+    Tags each token in the input list with its predicted language
     """
     global _MODEL, _ENCODER
 
-    # 1. Load model if not already loaded
+    # Load the trained decision tree model, if cannot be found, display error
     if _MODEL is None:
         if not os.path.exists(MODEL_FILENAME):
-            raise FileNotFoundError(f"Model file '{MODEL_FILENAME}' not found. Did you run train_model.py?")
+            raise FileNotFoundError(f"[Model file '{MODEL_FILENAME}' not found]")
         with open(MODEL_FILENAME, 'rb') as f:
             _MODEL = pickle.load(f)
 
-    # 2. Load ENCODER if not already loaded
+    # Load the feature encoder, if cannot be found, display error
     if _ENCODER is None:
         if not os.path.exists(ENCODER_FILENAME):
-            raise FileNotFoundError(f"Encoder file '{ENCODER_FILENAME}' not found. Please update train_model.py to save it.")
+            raise FileNotFoundError(f"[Encoder file '{ENCODER_FILENAME}' not found]")
         with open(ENCODER_FILENAME, 'rb') as f:
             _ENCODER = pickle.load(f)
 
-    # 3. Extract features using the embedded extractor
-    # This returns a DataFrame with correct column names
+    # Converts the raw data into a feature matrix (DataFrame with rows as each token and column as each feature)
     df_features = fe.extract_features(tokens)
 
-    # 4. NEW STEP: Encode categorical features
-    # We must use .transform() here, not .fit_transform()
+    # Encode categorical features into numbers that the model can use
     try:
         df_features_encoded = df_features.copy()
         df_features_encoded[CATEGORICAL_COLS] = _ENCODER.transform(df_features[CATEGORICAL_COLS])
     except Exception as e:
-        print(f"Critical Error: Failed to encode features. {e}")
+        print(f"[Error: Failed to encode features. {e}]")
         return ['OTH'] * len(tokens)
 
-    # 5. Reorder columns to strictly match the model's training order
+    # Reorder DataFrame columns to match FEATURE_COLS's order
     try:
         df_features_final = df_features_encoded[FEATURE_COLS]
     except KeyError as e:
-        print(f"Critical Error: Extractor is missing features required by the model: {e}")
+        print(f"[Error: Extractor is missing features required by the model: {e}]")
         return ['OTH'] * len(tokens)
 
-    # 6. Predict using the encoded and reordered DataFrame
+    # Predict the language of each string using the trained model
     try:
         predictions = _MODEL.predict(df_features_final)
         return list(predictions)
     except Exception as e:
-        print(f"Prediction Error: {e}")
+        print(f"[Error: {e}]")
         return ['OTH'] * len(tokens)
 
+# Tester
 if __name__ == "__main__":
     example_tokens = ["Cup", "Baso", "Ballpen", "Ginagamit"]
     print(f"Tokens: {example_tokens}")

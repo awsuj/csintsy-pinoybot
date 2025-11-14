@@ -23,37 +23,31 @@ def map_labels(label):
 
     return 'OTH' # NE, SYM, NUM, EXPR, ABB
 
-
+# Read training data from the file
 print("Starting model training process...")
 data = 'final_annotations.csv'
 try:
     df = pd.read_csv(data)
 except FileNotFoundError:
     print(f"Error: {data} not found.")
-    print("Please make sure the file is in the same directory.")
     exit()
 
-df_clean = df[['word', 'label']].dropna() # remove nulls (NOT SURE IF NEEDED)
-X_raw = df_clean['word']
+df_clean = df[['word', 'label']].dropna() # removes any nulls
+raw_word = df_clean['word']
 
 print("Mapping labels to FIL, ENG, OTH...")
-y = df_clean['label'].apply(map_labels)  # labeling labels to FIL, ENG, or OTH (NOT SURE IF NEEDED)
+y = df_clean['label'].apply(map_labels)  # categorizing labels as FIL, ENG, or OTH
 
 print(f"Loaded and cleaned {len(df_clean)} data points.")
-
 print("New label distribution:")
 print(y.value_counts())
 
 # extract features
+word_features = extract_features(raw_word.tolist())
 print("Extracting features...")
-X_features = extract_features(X_raw.tolist())
-print(f"Features extracted. Shape: {X_features.shape}")
+print(f"Features extracted. Shape: {word_features.shape}")
 
-
-
-# --- START OF NEW CODE BLOCK ---
-
-# 1. Define which columns have your categorical strings
+# List of columns that return strings
 categorical_cols = [
     'f_get_language',
     'f_oth_filter',
@@ -64,34 +58,24 @@ categorical_cols = [
     'f_eng_bigrams',
     'f_get_suffix_eng'
 ]
-# (Adjust this list to match the exact names of the functions you added)
 
 print("Encoding categorical features...")
 
 # 2. Make a copy to work on
-X_features_encoded = X_features.copy()
+word_features_encoded = word_features.copy()
 
-# 3. Initialize the encoder
-# handle_unknown='use_encoded_value' and unknown_value=-1 are safety features.
-# They prevent crashes if your validation/test data has a category
-# (e.g., a new prefix) that was not in the training data.
+# Convert categorical features into numbers, unknown val prevents errors
 encoder = OrdinalEncoder(handle_unknown='use_encoded_value', unknown_value=-1)
 
-# 4. Fit the encoder and transform the data
-# This learns the categories ("ENG", "FIL", "mag", "um", etc.)
-# and replaces them with integers (0, 1, 2, 3, etc.)
-X_features_encoded[categorical_cols] = encoder.fit_transform(X_features[categorical_cols])
-
-print("Encoding complete.")
-# --- END OF NEW CODE BLOCK ---
-
-
+# Fit the encoder and transform the data
+word_features_encoded[categorical_cols] = encoder.fit_transform(word_features[categorical_cols])
+print("Encoding done.")
 
 # split data
 print("Splitting data (70-15-15)...")
 
 X_train, X_temp, y_train, y_temp = train_test_split(
-    X_features_encoded, y,
+    word_features_encoded, y,
     test_size = 0.30,
     random_state = 42,
     stratify = y
@@ -99,7 +83,7 @@ X_train, X_temp, y_train, y_temp = train_test_split(
 
 X_val, X_test, y_val, y_test = train_test_split(
     X_temp, y_temp,
-    test_size = 0.50, # 50% of 30% is 15%
+    test_size = 0.50,
     random_state = 42,
     stratify = y_temp
 )
@@ -107,99 +91,76 @@ print(f"Train samples: {len(X_train)}")
 print(f"Validation samples: {len(X_val)}")
 print(f"Test samples: {len(X_test)}")
 
-print("\n--- 1. Tuning Model with Validation Set (using Macro F1-score) ---")
-
-# 1. Define the settings (hyperparameters) you want to try
+print("\n--- Tuning Model with Validation Set (using Macro F1-score) ---")
 possible_depths = [6,7,8,9,10,11]
 best_depth = None
-best_val_score = 0.0  # Keep track of the best score
-
-# 2. Loop through each setting
+best_val_score = 0.0
 for depth in possible_depths:
     print(f"Testing max_depth = {depth}...")
 
-    # 3. Create and train a *temporary* model
     model_to_tune = DecisionTreeClassifier(random_state=42, max_depth=depth)
     model_to_tune.fit(X_train, y_train)
-
-    # 4. Evaluate it on the VALIDATION set (the "practice exam")
     y_val_pred = model_to_tune.predict(X_val)
-    # --- THIS IS THE KEY CHANGE ---
-    # We use f1_score with average='macro' to handle imbalance
+
     val_score = f1_score(y_val, y_val_pred, average='macro')
     print(f"  Validation Macro F1: {val_score:.4f}")
-    # ----------------------------
 
-    # 5. Check if this is the best one so far
-    if val_score > best_val_score:
+    if val_score > best_val_score: #save the best score
         best_val_score = val_score
         best_depth = depth
 
-print("\n--- 2. Tuning Complete ---")
+print("\n--- Tuning Complete ---")
 print(f"Best max_depth found: {best_depth} (with {best_val_score:.4f} Macro F1)")
 
-# 6. Now, train your FINAL model on X_train using the best setting
-print("\n--- 3. Training Final Model ---")
+print("\n--- Train Model ---")
 final_model = DecisionTreeClassifier(random_state=42, max_depth=best_depth)
 final_model.fit(X_train, y_train)
-print("Final model training complete.")
+print("Model training complete")
 
-# 7. Generate a SIMPLE, READABLE tree image (for your report)
-print("Generating simple decision tree image...")
-plt.figure(figsize=(200, 50))  # A good size for a shallow tree
+# Generate an image of our decision tree
+print("Generating decision tree...")
+plt.figure(figsize=(200, 50))
 plot_tree(final_model,
-          feature_names=X_features.columns.tolist(),
+          feature_names=word_features.columns.tolist(),
           class_names=final_model.classes_,
           filled=True,
           rounded=True,
           fontsize=6,)
-plt.savefig('decision_tree_separated_6', dpi=300)
-print("Saved simple tree image to 'decision_tree_simple.png'")
+plt.savefig('decision_tree.png', dpi=300)
+print("Saved decision tree image to 'decision_tree.png'")
 
-# 8. Evaluate the FINAL model on the TEST set (the "final exam")
-print("\n--- 4. Final Evaluation on Test Set ---")
+print("\n--- Final Evaluation on Test Set ---")
 y_pred = final_model.predict(X_test)
-report = classification_report(y_test, y_pred, digits=4)  # Added digits=4 for more detail
+report = classification_report(y_test, y_pred, digits=4)  #Until 4 decimal pts
 print(report)
 
 print("\n--- Feature Importance Report ---")
 
-# Get feature names from your DataFrame
-feature_names = X_features.columns.tolist()
-# Get importances from the trained model
+feature_names = word_features.columns.tolist()
 importances = final_model.feature_importances_
-
-# Create a DataFrame to see them clearly
 importance_df = pd.DataFrame({
-    'feature': feature_names,
-    'importance': importances
+    'Feature': feature_names,
+    'Importance': importances
 })
 
-# Sort by importance, from 0.0 (unused) upwards
-importance_df = importance_df.sort_values(by='importance', ascending=True)
+# Sort from least to most important
+importance_df = importance_df.sort_values(by='Importance', ascending=True)
 
-print("--- UNUSED/LEAST IMPORTANT FEATURES ---")
-print(importance_df.head(10))  # Shows the 10 least important
+print("\n   --- UNUSED/LEAST IMPORTANT FEATURES ---")
+print(importance_df.head(10))  # Show the 10 least used features
+print("\n   --- MOST IMPORTANT FEATURES ---")
+print(importance_df.tail(10).sort_values(by='Importance', ascending=False)) # Show the 10 most used features
 
-print("\n--- MOST IMPORTANT FEATURES ---")
-print(importance_df.tail(10).sort_values(by='importance', ascending=False)) # Shows the 10 most important
-
-# 9. Save the final, tuned model
+# Save model and encoder
 model_filename = 'pinoybot_model_f1_validated_depth_11.pkl'
 encoder_filename = 'pinoybot_encoder_depth_11.pkl'
-print(f"\n--- 5. Saving Final Model ---")
+
+print(f"\n--- Saving Model ---")
 print(f"Saving trained model to {model_filename}...")
 with open(model_filename, 'wb') as f:
     pickle.dump(final_model, f)
 
-
-
-# --- ADD THIS BLOCK TO SAVE THE ENCODER ---
 print(f"Saving encoder to {encoder_filename}...")
 with open(encoder_filename, 'wb') as f:
     pickle.dump(encoder, f)
-# ---------------------------------------------
-
-
-
-print("Process finished.")
+print("Process finished")
