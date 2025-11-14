@@ -14,14 +14,24 @@ ENG_WORDS = {
     'a', 'an', 'the', 'is', 'are', 'was', 'were', 'he', 'she', 'it', 'they',
     'you', 'we', 'i', 'my', 'your', 'his', 'her', 'its', 'our', 'their',
     'in', 'on', 'at', 'of', 'to', 'for', 'with', 'by', 'from', 'and', 'but', 'or',
-    'am'
+    'am', 'me', 'him', 'us', 'them', 'this', 'that', 'these', 'those',
+    'be', 'been', 'do', 'does', 'did', 'have', 'has', 'had',
+    'will', 'would', 'can', 'could', 'should', 'may', 'might', 'must',
+    'so', 'if', 'when', 'then', 'because', 'as', 'while', 'than',
+    'about', 'after', 'before', 'down', 'out', 'over', 'up', 'under', 'through',
+    'not', 'no', 'yes', 'all', 'any', 'some', 'very', 'just', 'now',
+    'here', 'there', 'why', 'how', 'what', 'which', 'who', 'whom'
 }
 
 FIL_WORDS = {
     'ang', 'mga', 'sa', 'ng', 'na', 'pa', 'ba', 'ay', 'si', 'ni', 'kay', 'kina',
     'ako', 'ikaw', 'siya', 'tayo', 'kami', 'sila', 'ito', 'iyan', 'iyon',
     'ko', 'mo', 'niya', 'namin', 'nila', 'atin', 'inyo', 'at', 'o', 'pero', 'hindi',
-    'nang', 'nina', 'sina','natin','po', 'amin'
+    'nang', 'nina', 'sina', 'natin', 'po', 'amin',
+    'din', 'rin', 'daw', 'raw', 'lang', 'nga', 'naman', 'man', 'kasi', 'yata', 'muna',
+    'kayo', 'kanila', 'kaniya', 'dito', 'diyan', 'doon', 'nito', 'niyan', 'niyon',
+    'kaya', 'para', 'dahil', 'habang', 'kapag', 'kung', 'saka',
+    'may', 'meron', 'wala', 'dapat', 'talaga', 'mismo'
 }
 
 def f_get_language(token):
@@ -150,9 +160,10 @@ def f_prefix_fil(token):
         ng-
     """
     token_str = str(token).lower()
+    t_len = len(token_str)
 
     # Filter for 4 width prefix
-    if len(token_str) > 4:
+    if t_len > 4:
         """
             If token starts with 'maki'
                 return "MAKI"
@@ -202,7 +213,7 @@ def f_prefix_fil(token):
             return "PANG"
 
     # Filter for 3 width prefix
-    if len(token_str) > 3:
+    if t_len > 3:
         """
             If token starts with 'mag'
                 return "MAG"
@@ -228,7 +239,7 @@ def f_prefix_fil(token):
             return "PAG"
 
     # Filter for 2 width prefix
-    if len(token_str) > 2:
+    if t_len > 2:
         """
             If token starts with 'um' and the third letter is a vowel
                 return "UM"
@@ -295,9 +306,10 @@ def f_infix_fil(token):
         -ng-
     """
     token_str = str(token).lower()
+    t_len = len(token_str)
 
     # If token starts with a vowel and its length is more than 3
-    if token_str[0] not in 'aeiou' and len(token_str) > 3:
+    if token_str[0] not in 'aeiou' and t_len > 3:
         """
             If the token starts with a consonant and contains 'in' in the 2nd-3rd letter
                 return "IN"
@@ -315,7 +327,7 @@ def f_infix_fil(token):
             return "UM"
 
     # If token is longer than 3
-    if len(token_str) > 3:
+    if t_len > 3:
         """
             If 'ng' fits in the middle of the token, starting from index 1 to index 2
                 return "NG"
@@ -424,6 +436,177 @@ def f_eng_bigrams(token):
         return "ION"
 
     return "NONE"
+
+def f_get_suffix_eng(token):
+    """
+    Filters tokens with ENG suffixes characteristics:
+        -tion
+        -sion
+        -ment
+        -ness
+        -able
+        -ible
+        -less
+        -ing
+        -ful
+        -ity
+        -es
+        -ed
+        -er
+        -est
+        -ly
+        -s
+        -y
+    """
+    token_str = str(token).lower()
+    t_len = len(token_str)
+
+    # Filter for 4 width prefix
+    if t_len > 4:
+        """
+        If the token ends with 'tion'
+            return "TION"
+            EX: action, motion, emotion
+        """
+        if token_str.endswith('tion'):
+            return 'TION'
+
+        """
+        If the token ends with 'sion'
+            return "SION"
+            EX: precision, confusion, vision
+        """
+        if token_str.endswith('sion'):
+            return 'SION'
+
+        """
+        If the token ends with 'ment'
+            return "MENT"
+            EX: moment, payment, contentment
+        """
+        if token_str.endswith('ment'):
+            return 'MENT'
+
+        """
+        If the token ends with 'ness'
+            return "NESS"
+            EX: happiness, kindness, darkness
+        """
+        if token_str.endswith('ness'):
+            return 'NESS'
+
+        """
+        If the token ends with 'able'
+            return "ABLE"
+            EX: reachable, comfortable, doable
+        """
+        if token_str.endswith('able'):
+            return 'ABLE'
+
+        """
+        If the token ends with 'ible'
+            return "IBLE"
+            EX: visible, terrible, flexible
+        """
+        if token_str.endswith('ible'):
+            return 'IBLE'
+
+        """
+        If the token ends with 'less'
+            return "LESS"
+            EX: hopeless, useless, careless
+        """
+        if token_str.endswith('less'):
+            return 'LESS'
+
+    # Filter for 3 width prefix
+    if t_len > 3:
+        """
+        If the token ends with 'ing'
+            return "ING"
+            EX: walking, talking, coding
+        """
+        if token_str.endswith('ing'):
+            return 'ING'
+
+        """
+        If the token ends with 'ful'
+            return "FUL"
+            EX: beautiful, wonderful, painful
+        """
+        if token_str.endswith('ful'):
+            return 'FUL'
+
+        """
+        If the token ends with 'ity'
+            return "ITY"
+            EX: ability, flexibility, city
+        """
+        if token_str.endswith('ity'):
+            return 'ITY'
+
+        """
+        If the token ends with 'est'
+            return "EST"
+            EX: biggest, fastest, strongest
+        """
+        if token_str.endswith('est'):
+            return 'EST'
+
+    # Filter for 2 width prefix
+    if t_len > 2:
+        """
+        If the token ends with 'es'
+            return "ES"
+            EX: boxes, wishes, goes
+        """
+        # 'es' must be checked before 's'
+        if token_str.endswith('es'):
+            return 'ES'
+
+        """
+        If the token ends with 'ed'
+            return "ED"
+            EX: walked, talked, coded
+        """
+        if token_str.endswith('ed'):
+            return 'ED'
+
+        """
+        If the token ends with 'er'
+            return "ER"
+            EX: teacher, worker, faster
+        """
+        if token_str.endswith('er'):
+            return 'ER'
+
+        """
+        If the token ends with 'ly'
+            return "LY"
+            EX: quickly, slowly, happily
+        """
+        if token_str.endswith('ly'):
+            return 'LY'
+
+    # Filter for 1 width prefix
+    if t_len > 1:
+        """
+        If the token ends with 's' (and not 'es')
+            return "S"
+            EX: cats, dogs, runs
+        """
+        if token_str.endswith('s'):
+            return 'S'
+
+        """
+        If the token ends with 'y'
+            return "Y"
+            EX: happy, sleepy, party
+        """
+        if token_str.endswith('y'):
+            return 'Y'
+
+    return 'NONE'
 
 def f_contains_letters_cfjqvxz(token):
     """
@@ -574,6 +757,7 @@ def extract_features(tokens: List[str]) -> pd.DataFrame:
         f_infix_fil,
         f_suffix_fil,
         f_eng_bigrams,
+        f_get_suffix_eng,
         f_contains_letters_cfjqvxz,
         f_a_ratio,
         f_k_ratio,

@@ -61,7 +61,8 @@ categorical_cols = [
     'f_prefix_fil',
     'f_infix_fil',
     'f_suffix_fil',
-    'f_eng_bigrams'
+    'f_eng_bigrams',
+    'f_get_suffix_eng'
 ]
 # (Adjust this list to match the exact names of the functions you added)
 
@@ -109,7 +110,7 @@ print(f"Test samples: {len(X_test)}")
 print("\n--- 1. Tuning Model with Validation Set (using Macro F1-score) ---")
 
 # 1. Define the settings (hyperparameters) you want to try
-possible_depths = [6,7,8,9,10,11,12,13,14,15,17,18,19,20,21,22,23,24,25]
+possible_depths = [6,7,8,9,10,11]
 best_depth = None
 best_val_score = 0.0  # Keep track of the best score
 
@@ -152,7 +153,7 @@ plot_tree(final_model,
           filled=True,
           rounded=True,
           fontsize=6,)
-plt.savefig('decision_tree_separated_3', dpi=300)
+plt.savefig('decision_tree_separated_6', dpi=300)
 print("Saved simple tree image to 'decision_tree_simple.png'")
 
 # 8. Evaluate the FINAL model on the TEST set (the "final exam")
@@ -184,7 +185,7 @@ print("\n--- MOST IMPORTANT FEATURES ---")
 print(importance_df.tail(10).sort_values(by='importance', ascending=False)) # Shows the 10 most important
 
 # 9. Save the final, tuned model
-model_filename = 'pinoybot_model_f1_validated_separated_3.pkl'
+model_filename = 'pinoybot_model_f1_validated_separated_6.pkl'
 print(f"\n--- 5. Saving Final Model ---")
 print(f"Saving trained model to {model_filename}...")
 with open(model_filename, 'wb') as f:
