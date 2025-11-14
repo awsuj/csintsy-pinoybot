@@ -27,7 +27,8 @@ FEATURE_COLS = [
     "f_suffix_in", "f_suffix_an", "f_startswith_ng", "f_has_pair_ng",
     "f_has_pair_th", "f_contains_letters_cfjqvxz", "f_a_ratio",
     "f_k_ratio", "f_e_ratio", "f_vowel_consonant_ratio",
-    "f_has_consonant_cluster", "f_is_capitalized_mid_sentence"
+    "f_has_consonant_cluster", "f_is_capitalized_mid_sentence",
+    "f_first_letter_ascii", "f_last_letter_ascii", "f_common_eng_bigrams",
 ]
 
 # Global variable for the model

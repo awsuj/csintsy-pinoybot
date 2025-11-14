@@ -531,6 +531,31 @@ def f_is_capitalized_mid_sentence(token, index, tokens):
         return 0
     return 1
 
+def f_first_letter_ascii(token):
+    """
+    Returns the ASCII value of the first letter of the token.
+    """
+    return ord(token[0])
+
+def f_last_letter_ascii(token):
+    """
+        Returns the ASCII value of the last letter of the token.
+        """
+    return ord(token[-1])
+
+def f_common_eng_bigrams(token):
+    """
+    Counts how many common English bigrams appear in a given token.
+
+    Returns int
+        The number of English bigrams found in the token. The value ranges
+        from 0 up to the total number of bigrams in the list (6).
+    """
+
+    bigrams = ['sh', 'ch', 'wh', 'ck', 'qu', 'ion']
+    t = token.lower()
+    return sum(1 for bg in bigrams if bg in t)
+
 def extract_features(tokens: List[str]) -> pd.DataFrame:
     """
     Takes a list of tokens and converts it into a feature matrix.
@@ -571,6 +596,9 @@ def extract_features(tokens: List[str]) -> pd.DataFrame:
         f_e_ratio,
         f_vowel_consonant_ratio,
         f_has_consonant_cluster,
+        f_first_letter_ascii,
+        f_last_letter_ascii,
+        f_common_eng_bigrams,
     ]
 
     contextual_features = [
