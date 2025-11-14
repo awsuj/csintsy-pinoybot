@@ -32,18 +32,17 @@ except FileNotFoundError:
     print("Please make sure the file is in the same directory.")
     exit()
 
-df_clean = df[['word', 'label']].dropna() # remove nulls (NOT SURE IF NEEDED)
+df_clean = df[['word', 'label']].dropna() # remove nulls
 X_raw = df_clean['word']
 
 print("Mapping labels to FIL, ENG, OTH...")
-y = df_clean['label'].apply(map_labels)  # labeling labels to FIL, ENG, or OTH (NOT SURE IF NEEDED)
+y = df_clean['label'].apply(map_labels)  # labeling labels to FIL, ENG, or OTH
 
 print(f"Loaded and cleaned {len(df_clean)} data points.")
 
 print("New label distribution:")
 print(y.value_counts())
 
-# extract features
 print("Extracting features...")
 X_features = extract_features(X_raw.tolist())
 print(f"Features extracted. Shape: {X_features.shape}")
