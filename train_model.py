@@ -185,10 +185,21 @@ print("\n--- MOST IMPORTANT FEATURES ---")
 print(importance_df.tail(10).sort_values(by='importance', ascending=False)) # Shows the 10 most important
 
 # 9. Save the final, tuned model
-model_filename = 'pinoybot_model_f1_validated_separated_6.pkl'
+model_filename = 'pinoybot_model_f1_validated_depth_11.pkl'
+encoder_filename = 'pinoybot_encoder_depth_11.pkl'
 print(f"\n--- 5. Saving Final Model ---")
 print(f"Saving trained model to {model_filename}...")
 with open(model_filename, 'wb') as f:
     pickle.dump(final_model, f)
+
+
+
+# --- ADD THIS BLOCK TO SAVE THE ENCODER ---
+print(f"Saving encoder to {encoder_filename}...")
+with open(encoder_filename, 'wb') as f:
+    pickle.dump(encoder, f)
+# ---------------------------------------------
+
+
 
 print("Process finished.")
