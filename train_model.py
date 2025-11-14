@@ -145,7 +145,7 @@ print("\n--- MOST IMPORTANT FEATURES ---")
 print(importance_df.tail(10).sort_values(by='importance', ascending=False)) # Shows the 10 most important
 
 # 9. Save the final, tuned model
-model_filename = 'pinoybot_model_f1_validated_depth_20_1.pkl'
+model_filename = 'pinoybot_model_f1_validated_depth_20.pkl'
 print(f"\n--- 5. Saving Final Model ---")
 print(f"Saving trained model to {model_filename}...")
 with open(model_filename, 'wb') as f:
