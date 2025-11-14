@@ -1,6 +1,7 @@
 import pandas as pd
 import pickle
 from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import OrdinalEncoder
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.metrics import classification_report
 from feature_extractor import extract_features
@@ -32,26 +33,64 @@ except FileNotFoundError:
     print("Please make sure the file is in the same directory.")
     exit()
 
-df_clean = df[['word', 'label']].dropna() # remove nulls
+df_clean = df[['word', 'label']].dropna() # remove nulls (NOT SURE IF NEEDED)
 X_raw = df_clean['word']
 
 print("Mapping labels to FIL, ENG, OTH...")
-y = df_clean['label'].apply(map_labels)  # labeling labels to FIL, ENG, or OTH
+y = df_clean['label'].apply(map_labels)  # labeling labels to FIL, ENG, or OTH (NOT SURE IF NEEDED)
 
 print(f"Loaded and cleaned {len(df_clean)} data points.")
 
 print("New label distribution:")
 print(y.value_counts())
 
+# extract features
 print("Extracting features...")
 X_features = extract_features(X_raw.tolist())
 print(f"Features extracted. Shape: {X_features.shape}")
+
+
+
+# --- START OF NEW CODE BLOCK ---
+
+# 1. Define which columns have your categorical strings
+categorical_cols = [
+    'f_get_language',
+    'f_oth_filter',
+    'f_has_pair_vowel_word_duplication',
+    'f_prefix_fil',
+    'f_infix_fil',
+    'f_suffix_fil',
+    'f_eng_bigrams'
+]
+# (Adjust this list to match the exact names of the functions you added)
+
+print("Encoding categorical features...")
+
+# 2. Make a copy to work on
+X_features_encoded = X_features.copy()
+
+# 3. Initialize the encoder
+# handle_unknown='use_encoded_value' and unknown_value=-1 are safety features.
+# They prevent crashes if your validation/test data has a category
+# (e.g., a new prefix) that was not in the training data.
+encoder = OrdinalEncoder(handle_unknown='use_encoded_value', unknown_value=-1)
+
+# 4. Fit the encoder and transform the data
+# This learns the categories ("ENG", "FIL", "mag", "um", etc.)
+# and replaces them with integers (0, 1, 2, 3, etc.)
+X_features_encoded[categorical_cols] = encoder.fit_transform(X_features[categorical_cols])
+
+print("Encoding complete.")
+# --- END OF NEW CODE BLOCK ---
+
+
 
 # split data
 print("Splitting data (70-15-15)...")
 
 X_train, X_temp, y_train, y_temp = train_test_split(
-    X_features, y,
+    X_features_encoded, y,
     test_size = 0.30,
     random_state = 42,
     stratify = y
@@ -70,7 +109,7 @@ print(f"Test samples: {len(X_test)}")
 print("\n--- 1. Tuning Model with Validation Set (using Macro F1-score) ---")
 
 # 1. Define the settings (hyperparameters) you want to try
-possible_depths = [10, 12, 16, 18, 20, 22, 24, 26, 28, 30]
+possible_depths = [6,7,8,9,10,11,12,13,14,15,17,18,19,20,21,22,23,24,25]
 best_depth = None
 best_val_score = 0.0  # Keep track of the best score
 
@@ -106,14 +145,14 @@ print("Final model training complete.")
 
 # 7. Generate a SIMPLE, READABLE tree image (for your report)
 print("Generating simple decision tree image...")
-plt.figure(figsize=(275, 50))  # A good size for a shallow tree
+plt.figure(figsize=(200, 50))  # A good size for a shallow tree
 plot_tree(final_model,
           feature_names=X_features.columns.tolist(),
           class_names=final_model.classes_,
           filled=True,
           rounded=True,
-          fontsize=5,)
-plt.savefig('decision_tree_depth_20_1.png', dpi=300)
+          fontsize=6,)
+plt.savefig('decision_tree_separated_3', dpi=300)
 print("Saved simple tree image to 'decision_tree_simple.png'")
 
 # 8. Evaluate the FINAL model on the TEST set (the "final exam")
@@ -145,7 +184,7 @@ print("\n--- MOST IMPORTANT FEATURES ---")
 print(importance_df.tail(10).sort_values(by='importance', ascending=False)) # Shows the 10 most important
 
 # 9. Save the final, tuned model
-model_filename = 'pinoybot_model_f1_validated_depth_20.pkl'
+model_filename = 'pinoybot_model_f1_validated_separated_3.pkl'
 print(f"\n--- 5. Saving Final Model ---")
 print(f"Saving trained model to {model_filename}...")
 with open(model_filename, 'wb') as f:

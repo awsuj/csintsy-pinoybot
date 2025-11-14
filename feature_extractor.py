@@ -13,7 +13,8 @@ from typing import List
 ENG_WORDS = {
     'a', 'an', 'the', 'is', 'are', 'was', 'were', 'he', 'she', 'it', 'they',
     'you', 'we', 'i', 'my', 'your', 'his', 'her', 'its', 'our', 'their',
-    'in', 'on', 'at', 'of', 'to', 'for', 'with', 'by', 'from', 'and', 'but', 'or'
+    'in', 'on', 'at', 'of', 'to', 'for', 'with', 'by', 'from', 'and', 'but', 'or',
+    'am'
 }
 
 FIL_WORDS = {
@@ -23,392 +24,406 @@ FIL_WORDS = {
     'nang', 'nina', 'sina','natin','po', 'amin'
 }
 
-def f_is_english_word(token):
+def f_get_language(token):
     """
-    Check if it's an english word
+    Checks if a token is an English word, a Filipino word, or NONE of the above.
+    """
+    # Convert to string and lowercase it once
+    token_lower = str(token).lower()
+
+    if token_lower in ENG_WORDS:
+        return "ENG"
+    if token_lower in FIL_WORDS:
+        return "FIL"
+
+    return "NONE"
+
+def f_oth_filter(token):
+    """
+    Filters tokens with OTH characteristics:
+        Numeric
+        Symbol
+        Laughter
+        Abbreviations
     """
     token_str = str(token)
-    if str(token).lower() in ENG_WORDS:
-        return 1
-    return 0
 
-def f_is_filipino_word(token):
     """
-    Checks if it's a filipino word
+        Remove all the commas in the token
+        Try to convert the cleaned token into a float
+        If it works
+            return "NUMERIC"
+        If it does not work
+            pass
+        EX: 100,000.00 -> 100000.00 (success), 10 -> 10 (success),
+            Hello -> Hello (error), . -> . (error)
     """
-    token_str = str(token)
-    if str(token).lower() in FIL_WORDS:
-        return 1
-    return 0
-
-def f_is_laughter_expression(token):
-    """
-    If 'haha' or 'hehe' exists in the token
-        return 1
-    """
-    token_str = str(token).lower()
-    if 'haha' in token_str:
-        return 1
-    if 'hehe' in token_str:
-        return 1
-    return 0
-
-def f_is_fully_capitalized(token):
-    """
-    If the token does not have a letter
-        return 0
-    If the token is fully capitalized
-        return 1
-    """
-    token_str = str(token)
-    if not any(c.isalpha() for c in token_str):
-        return 0
-    if token_str.isupper():
-        return 1
-    return 0
-
-def f_is_pure_symbol(token):
-    """
-    If token is just punctuation or symbols
-    The '\W' means all symbols except '_', '_' is added for comparison
-    """
-    token_str = str(token)
-    if re.fullmatch(r'[\W_]+', token_str):
-        return 1
-    return 0
-
-def f_is_numeric(token):
-    """
-    Remove all the commas in the token
-    Try to convert the cleaned token into a float
-    If it works
-        return 1
-    If it does not work
-        return 0
-    EX: 100,000.00 -> 100000.00 (success), 10 -> 10 (success),
-        Hello -> Hello (error), . -> . (error)
-    """
-    token_str = str(token)
     cleaned_str = token_str.replace(",", "")
     try:
         float(cleaned_str)
-        return 1
+        return "NUMERIC"
     except ValueError:
-        return 0
+        pass
 
-def f_has_dash_duplication(token):
     """
-    The token is first split on the '-' if applicable
+        If token is just punctuation or symbols
+            return "SYMBOL"
+        The 'backslash W' means all symbols except '_', '_' is added for comparison
+    """
+    if re.fullmatch(r'[\W_]+', token_str):
+        return "SYMBOL"
 
-    If parts is split into 2, and both parts the same
-        return 1
-        EX: araw-araw, sino-sino, etc.
+    """
+        If 'haha' or 'hehe' exists in the token
+            return "LAUGHTER"
+    """
+    token_lower = token_str.lower()
+    if 'haha' in token_lower or 'hehe' in token_lower:
+        return "LAUGHTER"
+
+    """
+        If the token is mane of letters and is fully capitalized
+            return "ABB"
+    """
+    if any(c.isalpha() for c in token_str) and token_str.isupper():
+        return "ABB"
+
+    return "REGULAR"
+
+def f_has_pair_vowel_word_duplication (token):
+    """
+    Filters tokens with FIL characteristics:
+        Word duplication
+        Pair duplication
+        Vowel duplication
     """
     token_str = str(token).lower()
+
+    """
+        The token is first split on the '-' if applicable
+
+        If parts is split into 2, and both parts the same
+            return "WORD_dupe"
+            EX: araw-araw, sino-sino, etc.
+    """
     parts = token_str.split('-')
-
     if len(parts) == 2 and parts[0] == parts[1]:
-        return 1
-    return 0
+        return "WORD_dupe"
 
-def f_has_pair_duplication(token):
     """
-    If there is a group of 2 letters that repeat in succession
-        return 1
-        EX: tatakbo, nagtatanim, etc.
+        If there is a group of 2 letters that repeat in succession
+            return "PAIR_dupe"
+            EX: tatakbo, nagtatanim, etc.
     """
-    token_str = str(token).lower()
     if re.search(r'([a-z]{2})\1', token_str):
-        return 1
-    return 0
+        return "PAIR_dupe"
 
-
-def f_has_vowel_duplication(token):
     """
-    If there is a vowel that repeats in succession
-        return 1
-        EX: umiiyak, nag-aaral, etc.
+        If there is a vowel that repeats in succession
+            return "VOWEL_dupe"
+            EX: umiiyak, nag-aaral, etc.
     """
     token_str = str(token).lower()
     if re.search(r'([aeiou])\1', token_str):
-        return 1
-    return 0
+        return "VOWEL_dupe"
 
-def f_prefix_um(token):
+    return "NO_dupe"
+
+def f_prefix_fil(token):
     """
-    If length of token is less than 5 (it probably won't contain affixes)
-        return 0
-    If token starts with 'um' and the third letter is a vowel
-        return 1
-        EX: umalis, umiyak, etc.
+    Filters tokens with FIL prefix characteristics:
+        maki-
+        paki-
+        naki-
+        pala-
+        mala-
+        pang-
+        mag-
+        nag-
+        pag-
+        um-
+        in-
+        ni-
+        ma-
+        pa-
+        na-
+        ng-
     """
     token_str = str(token).lower()
-    if len(token_str) < 5:
-        return 0
-    if token_str.startswith('um') and token_str[2] in 'aeiou':
-        return 1
-    return 0
 
-def f_prefix_in(token):
+    # Filter for 4 width prefix
+    if len(token_str) > 4:
+        """
+            If token starts with 'maki'
+                return "MAKI"
+                EX: makikain, makisali, makipaglaro, etc.
+        """
+        if token_str.startswith('maki'):
+            return "MAKI"
+
+        """
+            If token starts with 'paki'
+                return "PAKI"
+                EX: pakibasa, pakisabi, pakisama, etc.
+        """
+        if token_str.startswith('paki'):
+            return "PAKI"
+
+        """
+            If token starts with 'naki'
+                return "NAKI"
+                EX: nakisakay, nakiinom, nakisama, etc.
+        """
+        if token_str.startswith('naki'):
+            return "NAKI"
+
+        """
+            If token starts with 'pala'
+                return "PALA"
+                EX: palangiti, palabiro, palatawa, etc.
+        """
+        if token_str.startswith('pala'):
+            return "PALA"
+
+        """
+            If token starts with 'mala'
+                return "MALA"
+                EX: malahayop, malaibon, malaanghel, etc.
+        """
+        if token_str.startswith('mala'):
+            return "MALA"
+
+        """
+            If token starts with 'pang'
+                return "PANG"
+                EX: pangkamay, pangligo, pang-abay, etc.
+        """
+        if token_str.startswith('pang'):
+            return "PANG"
+
+    # Filter for 3 width prefix
+    if len(token_str) > 3:
+        """
+            If token starts with 'mag'
+                return "MAG"
+                EX: magluto, magtatanim, maglilinis, etc.
+        """
+        if token_str.startswith('mag'):
+            return "MAG"
+
+        """
+            If token starts with 'nag'
+                return "NAG"
+                EX: nagbayad, naglalaba, nagsasayaw, etc.
+        """
+        if token_str.startswith('nag'):
+            return "NAG"
+
+        """
+            If token starts with 'pag'
+                return "PAG"
+                EX: pagkain, pagpunta, pag-aaral, etc.
+        """
+        if token_str.startswith('pag'):
+            return "PAG"
+
+    # Filter for 2 width prefix
+    if len(token_str) > 2:
+        """
+            If token starts with 'um' and the third letter is a vowel
+                return "UM"
+                EX: umalis, umiyak, etc.
+        """
+        if token_str.startswith('um') and token_str[2] in 'aeiou':
+            return "UM"
+
+        """
+            If token starts with 'in' and the third letter is a vowel
+                return "IN"
+                EX: inilagay, inabot, etc.
+        """
+        if token_str.startswith('in') and token_str[2] in 'aeiou':
+            return "IN"
+
+        """
+            If token starts with 'ni' and the third letter is 'l'
+                return "NI"
+                EX: niluto, nilinis, nilakad, etc.
+        """
+        if token_str.startswith('ni') and token_str[2] == 'l':
+            return "NI"
+
+        """
+            If token starts with 'ma'
+                return "MA"
+                EX: malakas, maganda, maingay, etc.
+        """
+        if token_str.startswith('ma'):
+            return "MA"
+
+        """
+            If token starts with 'pa'
+                return "PA"
+                EX: paalis, pakain, papunta, etc.
+        """
+        if token_str.startswith('pa'):
+            return "PA"
+
+        """
+            If token starts with 'na'
+                return "NA"
+                EX: natapon, nabasa, nabasag, etc.
+        """
+        if token_str.startswith('na'):
+            return "NA"
+
+        """
+            If the token starts with 'ng'
+                return "NG"
+                EX: ngunit, ngiti, ngayon, etc.
+        """
+        if token_str.startswith('ng'):
+            return "NG"
+
+    return "NONE"
+
+def f_infix_fil(token):
     """
-    If length of token is less than 5 (it probably won't contain affixes)
-        return 0
-    If token starts with 'in' and the third letter is a vowel
-        return 1
-        EX: inilagay, inabot, etc.
+    Filters tokens with FIL infix characteristics:
+        -in-
+        -um-
+        -ng-
     """
     token_str = str(token).lower()
-    if len(token_str) < 5:
-        return 0
-    if token_str.startswith('in') and token_str[2] in 'aeiou':
-        return 1
-    return 0
 
-def f_prefix_ni(token):
+    # If token starts with a vowel and its length is more than 3
+    if token_str[0] not in 'aeiou' and len(token_str) > 3:
+        """
+            If the token starts with a consonant and contains 'in' in the 2nd-3rd letter
+                return "IN"
+                EX: kinain, tinanim, pinalo etc.
+        """
+        if token_str[1:3] == 'in':
+            return "IN"
+
+        """
+            If the token starts with a consonant and contains 'um' in the 2nd-3rd letter
+                return "UM"
+                EX: pumunta, kumuha, tumawa etc.
+        """
+        if token_str[1:3] == 'um':
+            return "UM"
+
+    # If token is longer than 3
+    if len(token_str) > 3:
+        """
+            If 'ng' fits in the middle of the token, starting from index 1 to index 2
+                return "NG"
+                EX: pangalan, malungkot, mangga, etc.
+        """
+        if 'ng' in token_str[1:-1]:
+            return "NG"
+
+    return "NONE"
+
+def f_suffix_fil(tokens):
     """
-    If length of token is less than 5 (it probably won't contain affixes)
-        return 0
-    If token starts with 'ni' and the third letter is 'l'
-        return 1
-        EX: niluto, nilinis, nilakad, etc.
+    Filters tokens with FIL suffix characteristics:
+        -in
+        -an
+    """
+    token_str = str(tokens).lower()
+
+    # If token is bigger than 3 and 3rd to the last letter is 'u' or a consonant
+    if len(token_str) > 3 and (token_str[-3] == 'u' or token_str[-3] not in 'aeio'):
+        """
+            If the token ends in 'in'
+                return 1
+                EX: kainin, lutuin, kapitin, etc.
+        """
+        if token_str.endswith('in'):
+            return "IN"
+
+        """
+            If the token ends in 'an'
+                return "AN"
+                EX: palayan, puntahan, damitan, etc.
+        """
+        if token_str.endswith('an'):
+            return "AN"
+
+    return "NONE"
+
+def f_eng_bigrams(token):
+    """
+    Filters tokens with ENG bigrams characteristics:
+        th
+        sh
+        ch
+        wh
+        ck
+        qu
+        ion
     """
     token_str = str(token).lower()
-    if len(token_str) < 5:
-        return 0
-    if token_str.startswith('ni') and token_str[2] == 'l':
-        return 1
-    return 0
 
-def f_prefix_ma(token):
     """
-    If length of token is less than 5 (it probably won't contain affixes)
-        return 0
-    If token starts with 'ma'
-        return 1
-        EX: malakas, maganda, maingay, etc.
+        If the token contains 'th' in it
+            return "TH"
+            EX: the, mother, threatened, etc.
     """
-    token_str = str(token).lower()
-    if len(token_str) < 5:
-        return 0
-    if token_str.startswith('ma'):
-        return 1
-    return 0
-
-def f_prefix_pa(token):
-    """
-    If length of token is less than 5 (it probably won't contain affixes)
-        return 0
-    If token starts with 'pa'
-        return 1
-        EX: paalis, pakain, papunta, pakibasa, pakisabi etc.
-    """
-    token_str = str(token).lower()
-    if len(token_str) < 5:
-        return 0
-    if token_str.startswith('pa') or token_str.startswith('paki'):
-        return 1
-    return 0
-
-def f_prefix_na(token):
-    """
-    If length of token is less than 5 (it probably won't contain affixes)
-        return 0
-    If token starts with 'na'
-        return 1
-        EX: natapon, nabasa, nabasag, etc.
-    """
-    token_str = str(token).lower()
-    if len(token_str) < 5:
-        return 0
-    if token_str.startswith('na'):
-        return 1
-    return 0
-
-def f_prefix_mag(token):
-    """
-    If length of token is less than 6 (it probably won't contain affixes)
-        return 0
-    If token starts with 'mag'
-        return 1
-        EX: magluto, magtatanim, maglilinis, etc.
-    """
-    token_str = str(token).lower()
-    if len(token_str) < 6:
-        return 0
-    if token_str.startswith('mag'):
-        return 1
-    return 0
-
-def f_prefix_nag(token):
-    """
-    If length of token is less than 6 (it probably won't contain affixes)
-        return 0
-    If token starts with 'nag'
-        return 1
-        EX: nagbayad, naglalaba, nagsasayaw, etc.
-    """
-    token_str = str(token).lower()
-    if len(token_str) < 6:
-        return 0
-    if token_str.startswith('nag'):
-        return 1
-    return 0
-
-def f_prefix_pala(token):
-    """
-    If length of token is less than 7 (it probably won't contain affixes)
-        return 0
-    If token starts with 'pala'
-        return 1
-        EX: palangiti, palabiro, palatawa, etc.
-    """
-    token_str = str(token).lower()
-    if len(token_str) < 7:
-        return 0
-    if token_str.startswith('pala'):
-        return 1
-    return 0
-
-def f_prefix_mala(token):
-    """
-    If length of token is less than 7 (it probably won't contain affixes)
-        return 0
-    If token starts with 'mala'
-        return 1
-        EX: malahayop, malaibon, malaanghel, etc.
-    """
-    token_str = str(token).lower()
-    if len(token_str) < 7:
-        return 0
-    if token_str.startswith('mala'):
-        return 1
-    return 0
-
-def f_prefix_pang(token):
-    """
-    If length of token is less than 7 (it probably won't contain affixes)
-        return 0
-    If token starts with 'pang'
-        return 1
-        EX: pangkamay, pangligo, pang-abay, etc.
-    """
-    token_str = str(token).lower()
-    if len(token_str) < 7:
-        return 0
-    if token_str.startswith('pang'):
-        return 1
-    return 0
-
-def f_infix_in(token):
-    """
-    If length of token is less than 4 (it probably won't contain affixes)
-        return 0
-    If token starts with a vowel
-        return 0
-    If the token starts with a consonant (all starting with vowels are now gone) and
-    contains 'in' in the second to third letter
-        return 1
-        EX: kinain, tinanim, pinalo etc.
-    """
-    token_str = str(token).lower()
-    if len(token_str) < 4:
-        return 0
-    if token_str[0] in 'aeiou':
-        return 0
-    if token_str[1:3] == 'in':
-        return 1
-    return 0
-
-def f_infix_um(token):
-    """
-    If length of token is less than 4 (it probably won't contain affixes)
-        return 0
-    If token starts with a vowel
-        return 0
-    If the token starts with a consonant (all starting with vowels are now gone) and
-    contains 'um' in the second to third letter
-        return 1
-        EX: pumunta, kumuha, tumawa etc.
-    """
-    token_str = str(token).lower()
-    if len(token_str) < 4:
-        return 0
-    if token_str[0] in 'aeiou':
-        return 0
-    if token_str[1:3] == 'um':
-        return 1
-    return 0
-
-def f_suffix_in(token):
-    """
-    If length of token is less than 4 (it probably won't contain affixes)
-        return 0
-    If the token ends in 'in' and the third to the last letter is a 'u' or a consonant
-        return 1
-        EX: kainin, lutuin, kapitin, etc.
-    """
-    token_str = str(token).lower()
-    if len(token_str) < 4:
-        return 0
-    if token_str.endswith('in'):
-        third_last_char = token_str[-3]
-        if third_last_char == 'u' or third_last_char not in 'aeio':
-            return 1
-    return 0
-
-def f_suffix_an(token):
-    """
-    If length of token is less than 4 (it probably won't contain affixes)
-        return 0
-    If the token ends in 'an' and the third to the last letter is a 'u' or a consonant
-        return 1
-        EX: palayan, puntahan, damitan, etc.
-    """
-    token_str = str(token).lower()
-    if len(token_str) < 4:
-        return 0
-    if token_str.endswith('an'):
-        third_last_char = token_str[-3]
-        if third_last_char == 'u' or third_last_char not in 'aeio':
-            return 1
-    return 0
-
-def f_startswith_ng(token):
-    """
-    If the token starts with 'ng'
-        return 1
-        EX: ngunit, ngiti, ngayon, etc.
-    """
-    token_str = str(token).lower()
-    if token_str.startswith('ng'):
-        return 1
-    return 0
-
-def f_has_pair_ng(token):
-    """
-    If length of token is less than 4, 2 letters cant fit in the middle
-        return 0
-    If 'ng' fits in the middle of the token, starting from index 1 to the 2nd to the last letter
-        return 1
-        EX: pangalan, malungkot, mangga, etc.
-    """
-    token_str = str(token).lower()
-    if len(token_str) < 4:
-        return 0
-    if 'ng' in token_str[1:-1]:
-        return 1
-    return 0
-
-def f_has_pair_th(token):
-    """
-    If the token contains 'th' in it
-        return 1
-        EX: the, mother, threatened, etc.
-    """
-    token_str = str(token).lower()
     if 'th' in token_str:
-        return 1
-    return 0
+        return "TH"
+
+    """
+        If the token contains 'sh' in it
+            return "SH"
+            EX: shape, shrapnel, sheep, etc.
+    """
+    if 'sh' in token_str:
+        return "SH"
+
+    """
+        If the token contains 'ch' in it
+            return "CH"
+            EX: church, chicken, child, etc.
+    """
+    if 'ch' in token_str:
+        return "CH"
+
+    """
+        If the token contains 'wh' in it
+            return "WH"
+            EX: when, weather, which, etc.
+    """
+    if 'wh' in token_str:
+        return "WH"
+
+    """
+        If the token contains 'ck' in it
+            return "CK"
+            EX: chicken, peck, duck, etc.
+    """
+    if 'ck' in token_str:
+        return "CK"
+
+    """
+        If the token contains 'qu' in it
+            return "QU"
+            EX: quack, queen, quiz, etc.
+    """
+    if 'qu' in token_str:
+        return "QU"
+
+    """
+        If the token contains 'ion' in it
+            return "ION"
+            EX: action, motion, emotion, etc.
+    """
+    if 'ion' in token_str:
+        return "ION"
+
+    return "NONE"
 
 def f_contains_letters_cfjqvxz(token):
     """
@@ -471,10 +486,12 @@ def f_vowel_consonant_ratio(token):
     Get all the letters of the token
     If there are no letters
         return 0
+
     Loop through the letters list
     If it's a vowel, increment v_count, else, increment v_count
     If there are no consonants
-        return 0
+        return 100
+
     Otherwise, return ratio of vowels to consonants
     Note: Filipino words have a ratio closer to 1.0
     EX: pupunta = 0.75, isipin = 1.0, string = 0.2, university = 0.6
@@ -498,7 +515,7 @@ def f_vowel_consonant_ratio(token):
 def f_has_consonant_cluster(token):
     """
     consonant_pattern = match everything that is not:
-        ('aeiou', \d = '0-9', \w = all symbols, '_')
+        ('aeiou', backslash d = '0-9', backslash W = all symbols, '_')
         3 times in a row, or 3 consonants in a row
     If the patter exists in the token
         return 1
@@ -539,22 +556,9 @@ def f_first_letter_ascii(token):
 
 def f_last_letter_ascii(token):
     """
-        Returns the ASCII value of the last letter of the token.
-        """
+    Returns the ASCII value of the last letter of the token.
+    """
     return ord(token[-1])
-
-def f_common_eng_bigrams(token):
-    """
-    Counts how many common English bigrams appear in a given token.
-
-    Returns int
-        The number of English bigrams found in the token. The value ranges
-        from 0 up to the total number of bigrams in the list (6).
-    """
-
-    bigrams = ['sh', 'ch', 'wh', 'ck', 'qu', 'ion']
-    t = token.lower()
-    return sum(1 for bg in bigrams if bg in t)
 
 def extract_features(tokens: List[str]) -> pd.DataFrame:
     """
@@ -563,33 +567,13 @@ def extract_features(tokens: List[str]) -> pd.DataFrame:
     It returns a dataframe (2d array) where each row is a token and each column is a feature.
     """
     token_only_features = [
-        f_is_english_word,
-        f_is_filipino_word,
-        f_is_laughter_expression,
-        f_is_fully_capitalized,
-        f_is_pure_symbol,
-        f_is_numeric,
-        f_has_dash_duplication,
-        f_has_pair_duplication,
-        f_has_vowel_duplication,
-        f_prefix_um,
-        f_prefix_in,
-        f_prefix_ni,
-        f_prefix_ma,
-        f_prefix_pa,
-        f_prefix_na,
-        f_prefix_mag,
-        f_prefix_nag,
-        f_prefix_pala,
-        f_prefix_mala,
-        f_prefix_pang,
-        f_infix_in,
-        f_infix_um,
-        f_suffix_in,
-        f_suffix_an,
-        f_startswith_ng,
-        f_has_pair_ng,
-        f_has_pair_th,
+        f_get_language,
+        f_oth_filter,
+        f_has_pair_vowel_word_duplication,
+        f_prefix_fil,
+        f_infix_fil,
+        f_suffix_fil,
+        f_eng_bigrams,
         f_contains_letters_cfjqvxz,
         f_a_ratio,
         f_k_ratio,
@@ -597,8 +581,7 @@ def extract_features(tokens: List[str]) -> pd.DataFrame:
         f_vowel_consonant_ratio,
         f_has_consonant_cluster,
         f_first_letter_ascii,
-        f_last_letter_ascii,
-        f_common_eng_bigrams,
+        f_last_letter_ascii
     ]
 
     contextual_features = [
